@@ -1,6 +1,38 @@
 # 实习生每日工作台
 
-> 一个面向实习团队的任务执行与打卡闭环系统。实习生按业务线查看每日 SOP、勾选任务、提交打卡，数据自动同步飞书多维表格；Mentor 在后台验收。
+<div align="center">
+
+![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?style=flat-square&logo=nestjs&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Feishu](https://img.shields.io/badge/Feishu-Open%20API-00D6B9?style=flat-square&logo=feishu&logoColor=white)
+
+一个面向实习团队的任务执行与打卡闭环系统。实习生按业务线查看每日 SOP、勾选任务、提交打卡，数据自动同步飞书多维表格；Mentor 在后台验收。
+
+</div>
+
+## 界面预览
+
+| 身份选择 | 任务列表 | 每日打卡 | Mentor 验收 |
+|:---:|:---:|:---:|:---:|
+| ![首页](docs/images/01-home.png) | ![任务](docs/images/02-tasks.png) | ![打卡](docs/images/03-checkin.png) | ![Mentor](docs/images/04-mentor.png) |
+
+---
+
+## 目录
+
+- [一、业务背景](#一业务背景)
+- [二、用户场景](#二用户场景)
+- [三、人机方案](#三人机方案)
+- [四、技术方案设计](#四技术方案设计)
+- [五、流程闭环](#五流程闭环)
+- [六、失败案例与迭代](#六失败案例与迭代)
+- [快速开始](#快速开始)
+- [项目结构](#项目结构)
+- [自定义配置](#自定义配置)
+- [License](#license)
 
 ---
 
@@ -86,24 +118,37 @@
 
 | 层 | 选型 | 理由 |
 |----|------|------|
-| 前端 | React + TypeScript + Vite | 组件化适合任务卡片/表单等重复 UI；Vite 启动快 |
+| 前端 | React 18 + TypeScript + Vite | 组件化适合任务卡片/表单等重复 UI；Vite 启动快 |
 | 样式 | Tailwind CSS + CSS 变量 | 快速实现设计系统，支持业务线语义色 |
-| 后端 | NestJS + TypeScript | 模块化架构，与前端共享类型定义 |
+| 后端 | NestJS 10 + TypeScript | 模块化架构，与前端共享类型定义 |
 | 数据库 | SQLite + Drizzle ORM | 零运维，本地存储任务进度和打卡记录 |
 | 外部集成 | 飞书开放平台 API | 多维表格写入、电子表格读取、Bot 身份认证 |
 
 ### 4.2 系统架构
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  实习生前端   │────▶│  NestJS 后端  │────▶│  飞书多维表格 API │
-│  (React)    │◀────│  (NestJS)    │◀────│  (Bitable API)  │
-└─────────────┘     └──────┬───────┘     └─────────────────┘
-                           │
-                     ┌─────┴─────┐
-                     │  SQLite   │
-                     │ (本地缓存) │
-                     └───────────┘
+```mermaid
+graph LR
+    subgraph 客户端
+        A[实习生前端<br/>React]
+        M[Mentor 前端<br/>React]
+    end
+
+    subgraph 服务端
+        B[NestJS 后端]
+        C[(SQLite<br/>本地缓存)]
+    end
+
+    subgraph 飞书
+        D[飞书多维表格 API]
+        E[飞书电子表格 API]
+    end
+
+    A -->|HTTP API| B
+    M -->|HTTP API| B
+    B -->|读写| C
+    B -->|tenant_access_token| D
+    B -->|读取人员关系| E
+    D -->|写入打卡/业务记录| B
 ```
 
 - 前端负责任务展示、勾选、表单填写
@@ -135,36 +180,28 @@
 
 ### 5.1 核心流程
 
-```
-实习生打开工作台
-    │
-    ├─ 飞书客户端内 ──▶ 自动获取身份 ──▶ 匹配名单 ──▶ 进入任务页
-    │                                              │
-    └─ 客户端外/未命中 ──▶ 手动选择姓名 ─────────────┘
-                                                   │
-                                    ┌──────────────▼──────────────┐
-                                    │  展示所属业务线的当日 SOP 任务  │
-                                    │  (北极星指标 + 分时段任务)     │
-                                    └──────────────┬──────────────┘
-                                                   │
-                                    ┌──────────────▼──────────────┐
-                                    │  执行任务：勾选/上传附件/填链接 │
-                                    └──────────────┬──────────────┘
-                                                   │
-                                    ┌──────────────▼──────────────┐
-                                    │  下班前填写打卡：目标/完成量/卡点│
-                                    └──────────────┬──────────────┘
-                                                   │
-                                    ┌──────────────▼──────────────┐
-                                    │  提交：先存本地，再同步飞书     │
-                                    │  成功 → 显示"已同步"           │
-                                    │  失败 → 标记"同步失败"，可重试  │
-                                    └──────────────┬──────────────┘
-                                                   │
-                                    ┌──────────────▼──────────────┐
-                                    │  Mentor 验收台：查看所有打卡   │
-                                    │  通过 / 需改进 + 反馈          │
-                                    └─────────────────────────────┘
+```mermaid
+flowchart TD
+    A[实习生打开工作台] --> B{飞书客户端内?}
+    B -->|是| C[自动获取飞书身份]
+    B -->|否| D[手动下拉选择姓名]
+    C --> E{在实习生名单中?}
+    E -->|是| F[进入任务页]
+    E -->|否| D
+    D --> F
+    F --> G[展示所属业务线当日 SOP 任务]
+    G --> H[执行任务：勾选/上传附件/填链接]
+    H --> I[下班前填写打卡：目标/完成量/卡点]
+    I --> J{提交}
+    J --> K[先存本地 SQLite]
+    K --> L{同步飞书}
+    L -->|成功| M[显示已同步]
+    L -->|失败| N[标记同步失败，可重试]
+    M --> O[Mentor 验收台查看]
+    N --> O
+    O --> P{验收}
+    P -->|通过| Q[闭环完成]
+    P -->|需改进| R[填写反馈，退回修改]
 ```
 
 ### 5.2 异常兜底
@@ -232,56 +269,116 @@
 
 ---
 
-## 七、项目结构
+## 快速开始
 
-```
-├── client/                    # 前端
-│   └── src/
-│       ├── api/               # API 调用层
-│       ├── components/        # 通用组件（附件上传、表单抽屉等）
-│       ├── data/              # 配置数据（实习生、业务线、任务）
-│       ├── pages/             # 页面
-│       │   ├── HomePage/      # 身份选择
-│       │   ├── TaskDetailPage/# 任务列表与勾选
-│       │   ├── CheckinPage/   # 打卡填写
-│       │   └── MentorPage/    # Mentor 验收台
-│       └── store/             # 状态管理
-├── server/                    # 后端
-│   ├── database/              # 数据库 Schema
-│   └── modules/
-│       ├── bitable/           # 飞书多维表格同步
-│       ├── checkin/           # 打卡记录
-│       └── user/              # 用户身份
-├── shared/                    # 前后端共享类型
-└── package.json
-```
+### 环境要求
 
-## 八、快速开始
+- Node.js >= 22.0.0
+- npm >= 10.0.0
+
+### 1. 安装依赖
 
 ```bash
-# 安装依赖
 npm install
-
-# 启动开发服务器
-npm run dev
-
-# 构建生产版本
-npm run build
 ```
 
-### 飞书配置
+### 2. 配置飞书应用
 
 1. 在[飞书开放平台](https://open.feishu.cn/)创建企业自建应用
-2. 获取 App ID 和 App Secret，开通多维表格权限
-3. 将应用添加为目标多维表格的协作者（编辑权限）
-4. 在 Mentor 后台「飞书集成」面板中配置凭证
+2. 获取 App ID 和 App Secret
+3. 开通以下权限：
+   - `bitable:app`（多维表格读写）
+   - `sheets:spreadsheet`（电子表格读取）
+4. 将应用添加为目标多维表格的协作者（编辑权限）
+5. 复制环境变量模板并填写：
 
-### 自定义
+```bash
+cp .env.example .env
+```
 
-- 实习生名单：`client/src/data/interns.ts`
-- 业务线配置：`client/src/data/lines.ts`
-- 任务定义：`client/src/data/tasks.ts`
+编辑 `.env`：
+
+```env
+FEISHU_APP_ID=your_app_id_here
+FEISHU_APP_SECRET=your_app_secret_here
+FEISHU_BASE_TOKEN=your_base_token_here
+```
+
+### 3. 启动开发服务器
+
+```bash
+# 同时启动前端和后端（热重载）
+npm run dev
+
+# 或分别启动
+npm run dev:server    # NestJS 后端
+npm run dev:client    # Vite 前端
+```
+
+### 4. 构建生产版本
+
+```bash
+npm run build
+npm start
+```
+
+### 5. 其他命令
+
+```bash
+npm run type:check   # TypeScript 类型检查
+npm run lint         # ESLint 检查
+npm run test         # 运行测试
+```
+
+---
+
+## 项目结构
+
+```
+├── client/                    # 前端（React + Vite）
+│   └── src/
+│       ├── api/               #   API 调用层（HTTP 封装、各模块接口）
+│       ├── components/        #   通用组件（附件上传、表单抽屉等）
+│       ├── data/              #   配置数据（实习生、业务线、任务、表映射）
+│       ├── pages/             #   页面
+│       │   ├── HomePage/      #     身份选择
+│       │   ├── TaskDetailPage/#     任务列表与勾选
+│       │   ├── CheckinPage/   #     打卡填写与历史
+│       │   └── MentorPage/    #     Mentor 验收台
+│       ├── store/             #   状态管理（身份上下文、任务进度）
+│       └── utils/             #   工具函数
+├── server/                    # 后端（NestJS）
+│   ├── database/              #   数据库 Schema（Drizzle ORM）
+│   ├── common/                #   公共模块（过滤器、拦截器、常量）
+│   └── modules/
+│       ├── bitable/           #   飞书多维表格同步（含表定义、Sheet 读取）
+│       ├── checkin/           #   打卡记录 CRUD
+│       ├── user/              #   用户身份识别
+│       └── view/              #   页面视图路由
+├── shared/                    # 前后端共享 TypeScript 类型
+│   └── api.interface.ts
+├── docs/images/               # README 截图
+├── .env.example               # 环境变量模板
+├── package.json
+├── vite.config.ts
+├── tailwind.config.ts
+└── tsconfig.json
+```
+
+---
+
+## 自定义配置
+
+| 配置项 | 文件路径 | 说明 |
+|--------|----------|------|
+| 实习生名单 | `client/src/data/interns.ts` | 姓名、所属业务线 |
+| 业务线配置 | `client/src/data/lines.ts` | 线名、颜色、SOP 链接、北极星指标 |
+| 任务定义 | `client/src/data/tasks.ts` | 任务标题、时段、步骤、完成标准 |
+| 任务与子表映射 | `client/src/data/task-table-map.ts` | 任务关联的飞书多维表格 ID |
+| 飞书表 ID | `server/modules/bitable/bitable-tables.ts` | 各数据表的 tableId |
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE)
