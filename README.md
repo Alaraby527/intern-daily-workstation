@@ -13,6 +13,12 @@
 
 </div>
 
+## 交互演示
+
+[打开 Demo 源文件](./demo/index.html) · [查看完整实现](https://github.com/Alaraby527/intern-daily-workstation)
+
+Demo 提供实习生任务勾选、打卡提交和 Mentor 验收状态预览。数据为脱敏示例，只读演示，不连接飞书、不写入真实多维表格。
+
 ## 界面预览
 
 | 身份选择 | 任务列表 | 每日打卡 | Mentor 验收 |
