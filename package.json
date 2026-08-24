@@ -1,5 +1,5 @@
 {
-  "name": "fullstack-nestjs-template",
+  "name": "intern-daily-workstation",
   "version": "2.2.5",
   "private": true,
   "flags": {
@@ -9,28 +9,24 @@
     "customToaster": true
   },
   "scripts": {
-    "dev": "./scripts/dev.sh",
+    "dev": "concurrently -n \"server,client\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "NODE_ENV=development nest start --watch",
     "dev:client": "NODE_ENV=development vite --config vite.config.ts",
     "gen:db-schema": "npx -y @lark-apaas/db-schema-sync@latest --output server/database/schema.ts --export-custom-types",
     "gen:openapi": "echo 'UNSUPPORTED, SKIP'",
-    "build": "./scripts/build.sh",
+    "build": "npm run build:server && npm run build:client",
     "build:prod": "npm run build:server && npm run build:client",
     "build:server": "NODE_ENV=production nest build",
     "build:client": "NODE_ENV=production vite build --config vite.config.ts",
-    "start": "NODE_ENV=production node main.js",
+    "start": "NODE_ENV=production node dist/server/main.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "jest --config test/e2e/jest.config.js",
     "eslint": "eslint . --quiet",
     "stylelint": "stylelint client/src/**/*.css --quiet",
     "type:check": "concurrently -n \"server,client\" -c \"blue,green\" \"npm run type:check:server\" \"npm run type:check:client\"",
     "type:check:client": "tsc --noEmit --project tsconfig.app.json",
     "type:check:server": "tsc --noEmit --project tsconfig.node.json",
-    "lint": "node ./scripts/lint.js",
     "format": "prettier --write \"{server,client,test}/**/*.{js,ts,tsx,json,md}\"",
-    "precommit": "node scripts/hooks/run-precommit.js",
-    "prepare": "chmod +x .githooks/pre-commit 2>/dev/null; git config core.hooksPath .githooks 2>/dev/null || true",
     "postinstall": "fullstack-cli action-plugin init"
   },
   "dependencies": {
